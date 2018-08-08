@@ -6,7 +6,7 @@ import es.rorystok.mitd.model.Room
 
 object Bot extends App {
 
-  val token = "NDc2NjYzNzY1NDg4NzYyOTEx.Dkw3Qw.gYumanAn8ZSiNcuCL53T_13oTBg"
+  val token = sys.env("DISCORD_TOKEN")
 
   val mainHall = Room("Main Hall")
   val eastWing = Room("East Wing")
