@@ -1,17 +1,21 @@
-import Dependencies._
+val javaDeps = Seq(
+  "net.dv8tion" % "JDA" % "3.7.1_386"
+)
+
+val scalaDeps = Seq(
+  "io.suzaku" %% "diode" % "1.1.3"
+)
 
 resolvers += Resolver.jcenterRepo
-resolvers += "jitpack.io" at "https://jitpack.io"
 
 lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
       organization := "es.rorystok",
-      scalaVersion := "0.9.0-RC1",
+      scalaVersion := "2.12.6",
       version      := "0.1.0-SNAPSHOT"
     )),
+    scalacOptions ++= Seq("-language:implicitConversions"),
     name := "murder-in-the-discord",
-    libraryDependencies ++= Seq(
-      "net.dv8tion" % "JDA" % "3.7.1_386"
-    )
+    libraryDependencies ++= javaDeps ++ scalaDeps
   )

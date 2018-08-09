@@ -1,55 +1,34 @@
 package es.rorystok.mitd
 
 import es.rorystok.mitd.discord.{DiscordListener, DiscordService}
-import es.rorystok.mitd.game.{RoleManager, RoomManager}
-import es.rorystok.mitd.model.Room
+import es.rorystok.mitd.game.GameManager
+import es.rorystok.mitd.state.GameAction.DiscordUpdate
+import es.rorystok.mitd.state.GameCircuit
 
 object Bot extends App {
 
   val token = sys.env("DISCORD_TOKEN")
 
-  val mainHall = Room("Main Hall")
-  val eastWing = Room("East Wing")
-  val westWing = Room("West Wing")
-  val library = Room("Library")
-  val study = Room("Study")
-  val lounge = Room("Lounge")
-  val kitchen = Room("Kitchen")
+  var circuit = new GameCircuit
+  var maybeGame: Option[GameManager] = None
 
-  val rooms = Seq(
-    mainHall,
-    westWing,
-    eastWing,
-    library,
-    study,
-    lounge,
-    kitchen
-  )
+  val commandListener = DiscordListener.onMessageReceived { e =>
+    if(e.getMessage.getContentRaw == "!init" || e.getMessage.getContentRaw == "!reset") {
+      new DiscordService(e.getGuild).setVoiceChannels(Seq("Lobby"))
+    } else if(e.getMessage.getContentRaw == "!start") {
+      maybeGame = Some(new GameManager(circuit))
+    }
+  }
 
-  val passages = Seq(
-    westWing -> mainHall,
-    mainHall -> eastWing,
-    eastWing -> library,
-    eastWing -> study,
-    westWing -> lounge,
-    westWing -> kitchen
-  )
-
-
-  val roleManager = new RoleManager(rooms, passages)
-  val roomManager = new RoomManager(rooms, passages)
+  val circuitListener = DiscordListener.onGenericGuild { event =>
+    circuit.dispatch(DiscordUpdate(event.getGuild))
+  }
 
   val listeners = Seq(
     DiscordListener.onReady(_ => println("Ready")),
-    DiscordListener.onMessageReceived { e =>
-      println(e.getMessage.getContentRaw)
-      if(e.getMessage.getContentRaw == "!start") {
-        roleManager.init(e.getGuild)
-        roomManager.init(e.getGuild)
-      }
-    },
-    roomManager
+    commandListener,
+    circuitListener
   )
 
-  val discord = DiscordService(token, listeners)
+  val discord = DiscordService.start(token, listeners)
 }
