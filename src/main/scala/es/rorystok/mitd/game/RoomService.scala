@@ -2,31 +2,28 @@ package es.rorystok.mitd.game
 
 import es.rorystok.mitd.discord.DiscordAction
 import es.rorystok.mitd.model._
-import es.rorystok.mitd.state.GameCircuit
 
 import scala.language.implicitConversions
 
-class RoomManager(circuit: GameCircuit){
-  import RoomManager._
+object RoomService {
 
-  roomConfig foreach { config =>
-    val visible = config.name == "Main Hall"
-    circuit.dispatch(DiscordAction.CreateOrFetchVoiceChannel(config.name, visible))
+  def initialiseRooms: Seq[DiscordAction] = {
+    roomConfig map { config =>
+      val visible = config.name == "Main Hall"
+      DiscordAction.CreateOrFetchVoiceChannel(config.name, visible)
+    }
   }
-}
 
-case class RoomConfig(name: String) {
+  case class RoomConfig(name: String) {
 
-  def ~(other: RoomConfig): Seq[(String, RoomConnection)] = {
-    val connId = s"$name~${other.name}"
-    Seq(
-      name -> RoomConnection(connId, other.name, hidden=false),
-      other.name -> RoomConnection(connId, name, hidden=false)
-    )
+    def ~(other: RoomConfig): Seq[(String, RoomConnection)] = {
+      val connId = s"$name~${other.name}"
+      Seq(
+        name -> RoomConnection(connId, other.name, hidden=false),
+        other.name -> RoomConnection(connId, name, hidden=false)
+      )
+    }
   }
-}
-
-object RoomManager {
   def getRoom(ref: RoomRef) = Room(
     name = ref.name,
     channelId = ref.channelId,

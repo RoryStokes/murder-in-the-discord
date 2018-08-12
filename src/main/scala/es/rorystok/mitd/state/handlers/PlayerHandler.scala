@@ -3,7 +3,7 @@ package es.rorystok.mitd.state.handlers
 import diode.ActionResult.{EffectOnly, ModelUpdate, ModelUpdateEffect, NoChange}
 import diode._
 import es.rorystok.mitd.discord.DiscordAction
-import es.rorystok.mitd.game.RoomManager
+import es.rorystok.mitd.game.RoomService
 import es.rorystok.mitd.model._
 import es.rorystok.mitd.state.GameAction._
 
@@ -31,7 +31,7 @@ trait PlayerHandler { self: Circuit[GameState] =>
             case PlayerUpdateResult(None, Some(effect)) => effectOnly(effect)
             case PlayerUpdateResult(Some(newLoc), maybeEffect) =>
               val newRooms = newLoc match {
-                case InRoom(room) => RoomManager.getConnectedRooms(room, player, rootState.rooms)
+                case InRoom(room) => RoomService.getConnectedRooms(room, player, rootState.rooms)
                 case Moving(_, toRoom) => Seq(toRoom)
                 case Missing(room) => Seq(room)
               }

@@ -1,7 +1,7 @@
 package es.rorystok.mitd
 
 import es.rorystok.mitd.discord.{DiscordListener, DiscordService}
-import es.rorystok.mitd.game.GameManager
+import es.rorystok.mitd.game.{PlayerService, RoomService}
 import es.rorystok.mitd.state.GameAction._
 import es.rorystok.mitd.state.GameCircuit
 
@@ -10,13 +10,12 @@ object Bot extends App {
   val token = sys.env("DISCORD_TOKEN")
 
   var circuit = new GameCircuit
-  var maybeGame: Option[GameManager] = None
 
   val commandListener = DiscordListener.onMessageReceived { e =>
     if(e.getMessage.getContentRaw == "!init" || e.getMessage.getContentRaw == "!reset") {
       DiscordService.setVoiceChannels(Seq("Lobby"), e.getGuild)
     } else if(e.getMessage.getContentRaw == "!start") {
-      maybeGame = Some(new GameManager(circuit))
+      (RoomService.initialiseRooms ++ PlayerService.initialisePlayers(e.getGuild)).foreach(circuit.dispatch(_))
     }
   }
 
