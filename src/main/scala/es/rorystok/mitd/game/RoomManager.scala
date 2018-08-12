@@ -1,41 +1,49 @@
 package es.rorystok.mitd.game
 
-import es.rorystok.mitd.discord.DiscordService
-import es.rorystok.mitd.model.{Room, RoomConnection}
-import es.rorystok.mitd.state.GameAction.CreateRooms
+import es.rorystok.mitd.discord.DiscordAction
+import es.rorystok.mitd.model._
 import es.rorystok.mitd.state.GameCircuit
 
-import scala.concurrent.Future
 import scala.language.implicitConversions
-import scala.concurrent.ExecutionContext.Implicits.global
 
 class RoomManager(circuit: GameCircuit){
   import RoomManager._
 
-  private val guild = circuit.zoom(_.guild)
-
-  def init(discordService: DiscordService): Future[Unit] = {
-    for {
-      _ <- discordService.setVoiceChannels(rooms.map(_.name), hidden = true)
-      _ = circuit.dispatch(CreateRooms(rooms))
-    } yield ()
+  roomConfig foreach { config =>
+    val visible = config.name == "Main Hall"
+    circuit.dispatch(DiscordAction.CreateOrFetchVoiceChannel(config.name, visible))
   }
 }
 
 case class RoomConfig(name: String) {
-  val id: String = name
 
   def ~(other: RoomConfig): Seq[(String, RoomConnection)] = {
     val connId = s"$name~${other.name}"
     Seq(
-      id -> RoomConnection(connId, other.id, hidden=false),
-      other.id -> RoomConnection(connId, id, hidden=false)
+      name -> RoomConnection(connId, other.name, hidden=false),
+      other.name -> RoomConnection(connId, name, hidden=false)
     )
   }
 }
 
 object RoomManager {
-  val lobby = RoomConfig("Lobby")
+  def getRoom(ref: RoomRef) = Room(
+    name = ref.name,
+    channelId = ref.channelId,
+    entrance = ref.name == "Lobby",
+    connections = passageMap.getOrElse(ref.name, Nil)
+  )
+
+  def findByName(roomName: String, rooms: Map[ChannelId, Room]): Option[Room] =
+    rooms.values.find(_.name == roomName)
+
+  def getConnectedRooms(ref: RoomRef, player: Player, rooms: Map[ChannelId, Room]): Seq[RoomRef] = {
+    rooms.get(ref.channelId).toSeq flatMap { room =>
+      val connected = room.connections.flatMap(conn => findByName(conn.toRoom, rooms)) :+ room
+      connected.map(_.ref)
+    }
+  }
+
   val mainHall = RoomConfig("Main Hall")
   val eastWing = RoomConfig("East Wing")
   val westWing = RoomConfig("West Wing")
@@ -45,7 +53,6 @@ object RoomManager {
   val kitchen = RoomConfig("Kitchen")
 
   val roomConfig = Seq(
-    lobby,
     mainHall,
     westWing,
     eastWing,
@@ -56,7 +63,6 @@ object RoomManager {
   )
 
   val passages: Seq[(String, RoomConnection)] = Seq(
-    lobby ~ mainHall,
     westWing ~ mainHall,
     mainHall ~ eastWing,
     eastWing ~ library,
@@ -69,10 +75,4 @@ object RoomManager {
     .groupBy(_._1)
     .mapValues(list => list.map(_._2))
 
-  val rooms: Seq[Room] = roomConfig.map(config => Room(
-    name = config.name,
-    id = config.id,
-    connections = passageMap.getOrElse(config.id, Nil),
-    entrance = config.name == "Lobby"
-  ))
 }

@@ -1,9 +1,11 @@
 package es.rorystok.mitd
 
-import es.rorystok.mitd.model.Room
+import diode.{Circuit, ModelR}
 
 object Util {
-  def idForName(name: String) = name.split("[^\\w]").mkString("")
-  def roleForRoom(room: Room) =s"$$r_${idForName(room.name)}"
-  def roleForRoom(room: String) =s"$$r_${idForName(room)}"
+  def subscribeZipped[M <: AnyRef, A, B](circuit: Circuit[M], a: ModelR[M,A], b: ModelR[M,B])(handler: (A, B) => Unit): Unit = {
+    def handle(in: Any): Unit = handler(a.value, b.value)
+    circuit.subscribe(a)(handle)
+    circuit.subscribe(b)(handle)
+  }
 }

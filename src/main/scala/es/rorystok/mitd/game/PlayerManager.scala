@@ -11,30 +11,24 @@ class PlayerManager(circuit: GameCircuit){
   var players: Seq[Player] = Nil
 
   private val guild = circuit.zoom(_.guild)
-  guild() foreach  { g =>
-    val discordService = new DiscordService(g)
-    val members = discordService.getMembersInRoom("Lobby")
+  for {
+    guild <- guild()
+    (room, members) <- DiscordService.getMembersInRoom("Lobby", guild)
     players = members.map(member => Player(
       name = member.getEffectiveName,
       userId = member.getUser.getId,
-      location = Missing("Main Hall")
+      location = InRoom(room),
+      canSee = Seq(room)
     ))
-    println(players)
-    circuit.dispatch(CreatePlayers(players))
-    players.foreach(player => discordService.createOrFetchUserRole(player.userId))
-  }
-
-  def playersWhoSeeRoom(room: Room): Seq[Player] = {
-    players.filter(playerCanSee(_, room))
-  }
-
-  def playerCanSee(player: Player, room: Room): Boolean = {
-    player.location match {
-      case Moving(_, to) => to == room.id
-      case loc: InSingleRoom if loc.roomId == room.id => true
-      case InRoom(roomId) =>
-        room.connections.exists(_.toRoom == roomId)
-      case _ => false
-    }
-  }
+  } yield circuit.dispatch(CreatePlayers(players))
+//
+//  def playerCanSee(player: Player, room: Room): Boolean = {
+//    player.location match {
+//      case Moving(_, to) => to == room.id
+//      case loc: InSingleRoom if loc.roomId == room.id => true
+//      case InRoom(roomId) =>
+//        room.connections.exists(_.toRoom == roomId)
+//      case _ => false
+//    }
+//  }
 }

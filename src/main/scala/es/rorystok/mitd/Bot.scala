@@ -2,7 +2,7 @@ package es.rorystok.mitd
 
 import es.rorystok.mitd.discord.{DiscordListener, DiscordService}
 import es.rorystok.mitd.game.GameManager
-import es.rorystok.mitd.state.GameAction.DiscordUpdate
+import es.rorystok.mitd.state.GameAction._
 import es.rorystok.mitd.state.GameCircuit
 
 object Bot extends App {
@@ -14,7 +14,7 @@ object Bot extends App {
 
   val commandListener = DiscordListener.onMessageReceived { e =>
     if(e.getMessage.getContentRaw == "!init" || e.getMessage.getContentRaw == "!reset") {
-      new DiscordService(e.getGuild).setVoiceChannels(Seq("Lobby"))
+      DiscordService.setVoiceChannels(Seq("Lobby"), e.getGuild)
     } else if(e.getMessage.getContentRaw == "!start") {
       maybeGame = Some(new GameManager(circuit))
     }
@@ -26,9 +26,19 @@ object Bot extends App {
 
   val listeners = Seq(
     DiscordListener.onReady(_ => println("Ready")),
+    DiscordListener.onGuildVoiceMove { event =>
+      circuit.dispatch(PlayerMoving(DiscordService.playerRef(event.getMember), DiscordService.roomRef(event.getChannelJoined)))
+    },
+    DiscordListener.onGuildVoiceJoin { event =>
+      circuit.dispatch(PlayerMoving(DiscordService.playerRef(event.getMember), DiscordService.roomRef(event.getChannelJoined)))
+    },
+    DiscordListener.onGuildVoiceLeave { event =>
+      circuit.dispatch(PlayerMissing(DiscordService.playerRef(event.getMember)))
+    },
     commandListener,
     circuitListener
   )
 
-  val discord = DiscordService.start(token, listeners)
+  val UserRole = "\\$p_(.*)".r
+  val discord = new DiscordService(token, listeners)
 }

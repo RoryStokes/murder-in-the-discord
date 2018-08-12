@@ -1,17 +1,16 @@
 package es.rorystok.mitd.state.handlers
 
-import diode.ActionResult.NoChange
-import diode.{ActionHandler, Circuit}
-import es.rorystok.mitd.model.GameState
-import es.rorystok.mitd.state.GameAction.{CreateRooms, PlayerMoved}
+import diode.{ActionHandler, ActionResult, Circuit}
+import es.rorystok.mitd.game.RoomManager
+import es.rorystok.mitd.model.{ChannelId, GameState, Room}
+import es.rorystok.mitd.state.GameAction.InitialiseRoom
 
 trait RoomHandler { self: Circuit[GameState] =>
 
-  val roomHandler = new ActionHandler(zoomTo(_.rooms)) {
-    override def handle = {
-      case CreateRooms(rooms) =>
-        println(rooms)
-        updated(rooms)
+  val roomHandler: ActionHandler[GameState, Map[ChannelId, Room]] = new ActionHandler(zoomTo(_.rooms)) {
+    override def handle: PartialFunction[Any, ActionResult[GameState]] = {
+      case InitialiseRoom(room) =>
+        updated(value + (room.channelId -> RoomManager.getRoom(room)))
     }
   }
 }
